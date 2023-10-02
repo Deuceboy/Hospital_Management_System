@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+{% load static %}
+
+<html>
+<head>
+    {% csrf_token %}
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .bg-primary {
+            background-color: #28a745 !important; /* Bootstrap's green color */
+        }
+        .border-primary {
+            border-color: #28a745 !important;
+        }
+        .text-primary {
+            color: #28a745 !important;
+        }
+        .badge-primary {
+            background-color: #28a745 !important;
+        }
+    </style>
+</head>
+
+<body>
+<div class="container mt-5">
+
+    <!-- Nurse's card -->
+<div class="card text-white bg-primary mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <div>
+            <i class="fas fa-user-nurse"></i> Nurse's Dashboard
+        </div>
+        <div>
+            <button id="logoutButton" class="btn btn-light">Logout</button>
+        </div>
+    </div>
+    <div class="card-body">
+        <h4 class="card-title">Welcome back, Nurse {{ nurse.first_name }} {{ nurse.last_name }}!</h4>
+        <p class="card-text">Here's a list of patients assigned to you. Ensure to attend to each one diligently.</p>
+    </div>
+</div>
+
+
+    <!-- Patients section -->
+    <div class="card border-primary">
+    <div class="card-header bg-primary text-white">
+        Patients List
+    </div>
+    <ul class="list-group list-group-flush">
+        <!-- Assuming you're within a loop rendering each patient -->
+        {% for patient in patients %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+            <div class="patient-info">
+                {{ patient.first_name }} {{ patient.last_name }}
+                <span class="badge badge-success badge-pill">{{ patient.symptoms }}</span>
+            </div>
+            <div class="patient-buttons d-flex">
+                <!-- Trigger button for Details Modal -->
+                <button type="button" class="btn btn-info btn-sm view-details-button" data-toggle="modal" data-target="#patientModal" data-patient-id="{{ patient.id }}">View Details</button>
+                <!-- Button trigger for Report modal -->
+                <button type="button" class="btn btn-primary ml-2 reportButton" data-toggle="modal" data-target="#nurseReportModal" data-patient-id="{{ patient.id }}" data-patient-name="{{ patient.first_name }} {{ patient.last_name }}" data-doctor-name="{{ patient.assigned_doctor }}">
+                    Report
+                </button>
+            </div>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+
+
+    <!-- Modal for Patient Details & Notes -->
+    <div class="modal fade" id="patientModal" tabindex="-1" aria-labelledby="patientModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="patientModalLabel">Patient Details</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <!-- Patient Details -->
+                    <h6>Personal Details:</h6>
+                    <div id="patient-details">
+                        <strong>Name:</strong> <span id="detailPatientName"></span><br>
+                        <strong>Date of Birth:</strong> <span id="patientDob"></span><br>
+                        <strong>Gender:</strong> <span id="patientGender"></span><br>
+                        <strong>Address:</strong> <span id="patientAddress"></span><br>
+                        <strong>Phone:</strong> <span id="patientPhone"></span><br>
+                        <strong>Email:</strong> <span id="patientEmail"></span><br>
+                        <strong>Medical History:</strong> <span id="patientMedicalHistory"></span><br>
+                        <strong>Insurance:</strong> <span id="patientInsurance"></span>
+                    </div>
+                    <hr>
+                    <hr>
+                                        <!-- Patient Prescriptions -->
+                    <h6>Prescription:</h6>
+                    <div id="patient-prescription">
+                        <strong>Medication:</strong> <span id="prescriptionMedication"></span><br>
+                        <strong>Dosage:</strong> <span id="prescriptionDosage"></span><br>
+                        <strong>Instructions:</strong> <span id="prescriptionInstructions"></span>
+                    </div>
+                    <hr>
+                    <!-- Patient Notes -->
+                    <h6>Doctor's Notes:</h6>
+                    <div id="patient-notes">
+                        <strong>Note:</strong> <span id="noteContent"></span><br>
+                        <strong>Doctor:</strong> <span id="noteDoctor"></span><br>
+                        <strong>Date:</strong> <span id="noteDate"></span>
+                    </div>
+                    <hr>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+  <!-- Nurse Report Modal -->
+<div class="modal fade" id="nurseReportModal" tabindex="-1" aria-labelledby="nurseReportModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="nurseReportModalLabel">Nurse Report</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="nurseReportForm">
+                    <!-- Hidden input for patient ID, to be populated by JS -->
+                    <input type="hidden" id="reportPatientId" name="patient">
+
+                    <div class="mb-3">
+                        <label for="reportPatientName" class="form-label">Patient's Name</label>
+                        <input type="text" class="form-control" id="reportPatientName" name="patient_name" readonly>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="assignedDoctor" class="form-label">Assigned Doctor</label>
+                        <input type="text" class="form-control" id="assignedDoctor" name="doctor_name" readonly>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="currentDate" class="form-label">Current Date</label>
+                        <input type="text" class="form-control" id="currentDate" name="current_date" readonly>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="currentStatus" class="form-label">Current Status</label>
+                        <select class="form-control" id="currentStatus" name="current_status">
+                            <option value="Critical">Critical</option>
+                            <option value="Stable">Stable</option>
+                            <option value="Under Observation">Under Observation</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="medications" class="form-label">Medications or treatments administered</label>
+                        <textarea class="form-control" id="medications" name="medications_treatments" rows="3"></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="details" class="form-label">Any other relevant details</label>
+                        <textarea class="form-control" id="details" name="other_details" rows="4"></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="nurseName" class="form-label">Nurse's Name</label>
+                        <input type="text" class="form-control" id="nurseName" name="nurse_display_name" readonly>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="reportDescription" class="form-label">Description</label>
+                        <textarea class="form-control" id="reportDescription" name="description" rows="4"></textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-success">Submit Report</button>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+<script src="{% static 'hospital/js/nurse-patient.js' %}"></script>
+<script src="{% static 'hospital/js/nurse-report.js' %}"></script>
+<script src="{% static 'hospital/js/logout.js' %}"></script>
+
+
+
+
+</body>
+</html>

@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+{% load static %}
+
+<html>
+<head>
+    {% csrf_token %}
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+   .header-content {
+    display: flex;
+    justify-content: space-between; /* Distributes the two child items on the far left and far right */
+    align-items: center;
+}
+
+.left-content {
+    display: flex;
+    align-items: center;
+}
+
+.header-content button {
+    padding: 5px 15px;
+    margin-left: 10px; /* Adds a bit of space between the welcome text and button */
+}
+</style>
+
+</head>
+
+<body>
+
+<div class="container mt-5">
+    <div class="card">
+        <div class="card-header bg-primary text-white header-content">
+            <div class="left-content">
+                <h2>Welcome Dr. {{ doctor.first_name }} {{ doctor.last_name }}</h2>
+            </div>
+            <button type="button" class="btn btn-danger" id="logoutButton">Logout</button>
+        </div>
+        <div class="card-body">
+            <p><strong>Specialization:</strong> {{ doctor.specialization }}</p>
+            <p><strong>Department:</strong> {{ doctor.department }}</p>
+            <!-- Button to open modal -->
+            <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#reportModal">
+                View Nurse Report
+            </button>
+        </div>
+    </div>
+</div>
+
+
+
+   <div class="container mt-5">
+    <div class="card">
+        <div class="card-header bg-info text-white">
+            <h4>Patients</h4>
+        </div>
+        <ul class="list-group list-group-flush">
+        {% for patient in patients %}
+            <li class="list-group-item">
+                <a href="#" class="patient-link" data-patient-id="{{ patient.id }}">
+                    {{ patient.first_name }} {{ patient.last_name }}
+                </a>
+                ({{ patient.date_of_birth }}) - {{ patient.condition }}
+                <!-- Prescription button added here -->
+                <button class="btn btn-sm btn-primary prescribe-btn float-end" data-patient-id="{{ patient.id }}" style="margin-left: 10px;">Prescribe</button>
+                <!-- Add Note button added here -->
+                <button class="btn btn-sm btn-warning add-note-btn float-end" data-patient-id="{{ patient.id }}" data-toggle="modal" data-target="#patientNoteModal">Add Note</button>
+            </li>
+        {% endfor %}
+        </ul>
+    </div>
+
+
+
+        <div class="container mt-5">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h4>Upcoming Appointments</h4>
+                </div>
+                <ul class="list-group list-group-flush">
+                    {% for appointment in appointments %}
+                    <li class="list-group-item" data-appointment-id="{{ appointment.id }}">
+                        {{ appointment.date }} with
+                        {% if appointment.patient %}
+                        {{ appointment.patient.name }}
+                        {% else %}
+                        {{ appointment.patient_name }}
+                        {% endif %}
+                        <!-- Dropdown for changing status -->
+                        <div class="dropdown float-right">
+                            <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                Change Status
+                            </button>
+                            <button class="btn btn-warning btn-reschedule" data-toggle="modal" data-target="#rescheduleModal" data-appointment-id="{{ appointment.id }}">Reschedule</button>
+                            <div class="dropdown-menu" aria-labelledby="dropdownMenuButton" onclick="event.stopPropagation();">
+                                <a class="dropdown-item" href="#" data-status="Pending">Pending</a>
+                                <a class="dropdown-item" href="#" data-status="Confirmed">Confirmed</a>
+                                <a class="dropdown-item" href="#" data-status="Cancelled">Cancelled</a>
+                                <a class="dropdown-item" href="#" data-status="Completed">Completed</a>
+                            </div>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+
+<!-- Patient Note Modal -->
+<div class="modal fade" id="patientNoteModal" tabindex="-1" aria-labelledby="patientNoteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="patientNoteModalLabel">Add Patient Note</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="messageBox"></div> <!-- This is the message box -->
+                <form id="patientNoteForm">
+                    <textarea class="form-control" id="noteContent" rows="5" placeholder="Add your note here..." required></textarea>
+                    <input type="hidden" id="patientNoteId" value="">
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+                <button type="button" id="submitNote">Add Note</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Patient Details Modal -->
+<div class="modal" tabindex="-1" id="patientModal">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Patient Details</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+
+                <!-- Patient details placeholder -->
+                <div id="patientDetailsPlaceholder">
+                    <!-- Patient details will be populated here -->
+                </div>
+
+                <!-- Placeholder for messages -->
+                <div id="messagePlaceholder"></div>
+
+                <!-- Medical History Form Start -->
+                <form id="updateMedicalHistoryForm">
+                    <div class="mb-3">
+                        <label for="medical_history" class="form-label">Medical History</label>
+                        <textarea class="form-control" style="max-height: 150px; margin: 0;" name="medical_history" id="medical_history" rows="5"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Update Medical History</button>
+                </form>
+                <!-- Medical History Form End -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Prescription Modal -->
+<div class="modal fade" id="prescriptionModal" tabindex="-1" aria-labelledby="prescriptionModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="prescriptionModalLabel">Prescribe Medication</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="prescriptionForm">
+            <input type="hidden" id="prescriptionPatientId" value=""> <!-- This will store the patient ID -->
+
+            <!-- Medication Dropdown. This should be populated with an AJAX call to get all medications -->
+            <div class="mb-3">
+                <label for="medicationDropdown" class="form-label">Medication</label>
+                <select class="form-select" id="medicationDropdown" name="medication" required>
+                    <!-- Options will be populated by JavaScript -->
+                </select>
+            </div>
+
+            <!-- Dosage Input -->
+            <div class="mb-3">
+                <label for="dosageInput" class="form-label">Dosage</label>
+                <input type="text" class="form-control" id="dosageInput" required>
+            </div>
+
+            <!-- Instructions Textarea -->
+            <div class="mb-3">
+                <label for="instructionsTextarea" class="form-label">Instructions</label>
+                <textarea class="form-control" id="instructionsTextarea" rows="3" required></textarea>
+            </div>
+
+            <!-- Date Prescribed Input -->
+            <div class="mb-3">
+                <label for="datePrescribedInput" class="form-label">Date Prescribed</label>
+                <input type="date" class="form-control" id="datePrescribedInput" required>
+            </div>
+
+
+
+
+            <div id="prescriptionMessagePlaceholder"></div> <!-- To show any success or error messages -->
+
+            <button type="submit" class="btn btn-primary" id="prescribeButton">Prescribe</button>
+        </form>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+          </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- Reschedule Modal -->
+<div class="modal fade" id="rescheduleModal" tabindex="-1" role="dialog" aria-labelledby="rescheduleModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="rescheduleModalLabel">Reschedule Appointment</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <input type="date" id="newDate" class="form-control mb-2">
+                <input type="time" id="newTime" class="form-control">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="confirmReschedule">Confirm Reschedule</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Appointment Details Modal -->
+<div class="modal fade" id="appointmentDetailsModal" tabindex="-1" role="dialog" aria-labelledby="appointmentDetailsModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="appointmentDetailsModalLabel">Appointment Details</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <!-- Details will go here -->
+        <p><strong>Date:</strong> <span id="modalAppointmentDate"></span></p>
+        <p><strong>Time:</strong> <span id="modalAppointmentTime"></span></p>
+        <p><strong>Patient:</strong> <span id="modalPatientName"></span></p>
+        <p><strong>Phone Number:</strong> <span id="modalPhoneNumber"></span></p>
+        <p><strong>Symptoms:</strong> <span id="modalSymptoms"></span></p>
+        <p><strong>Status:</strong> <span id="modalStatus"></span></p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- View Nurse Report Modal -->
+<div class="modal fade" id="reportModal" tabindex="-1" aria-labelledby="reportModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="reportModalLabel">Fetch Nurse Report</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <!-- Input for patient name -->
+        <input type="text" class="form-control mb-3" id="patientNameInput" placeholder="Enter patient name" />
+
+        <!-- Placeholders for Report Details (Initially Hidden) -->
+        <div id="reportDetails" style="display: none;">
+          <p><strong>Date:</strong> <span id="reportDate"></span></p>
+          <p><strong>Status:</strong> <span id="reportStatus"></span></p>
+          <p><strong>Medications & Treatments:</strong> <span id="reportMedications"></span></p>
+          <p><strong>Other Details:</strong> <span id="reportOtherDetails"></span></p>
+          <p><strong>Patient Name:</strong> <span id="reportPatientName"></span></p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" id="fetchReportBtn">Fetch Report</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+<!-- bootstrap js -->
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+<!-- api js -->
+<script src="{% static 'hospital/js/appointment-details.js' %}"></script> <!-- getCookie function here -->
+<script src="{% static 'hospital/js/patient-details.js' %}"></script>
+<script src="{% static 'hospital/js/appointment-status-change.js' %}"></script>
+<script src="{% static 'hospital/js/appointment-reschedule.js' %}"></script> <!-- If you've added this for rescheduling -->
+<script src="{% static 'hospital/js/prescription.js' %}"></script>
+<script src="{% static 'hospital/js/patient-notes.js' %}"></script>
+<script src="{% static 'hospital/js/report-detail.js' %}"></script>
+<script src="{% static 'hospital/js/logout.js' %}"></script>
+
+<script>
+    // Bootstrap Modal Event Listeners
+    $('#rescheduleModal').on('show.bs.modal', function (event) {
+        console.log("Modal is about to be shown");
+    });
+
+    $('#rescheduleModal').on('shown.bs.modal', function (event) {
+        console.log("Modal has been displayed");
+    });
+</script>
+
+
+</body>
+</html>
