@@ -125,4 +125,4 @@ function updatePaymentStatus() {
 
 
 
-}); // Close the DOMContentLoaded callback
+});

@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import User, Patient, Doctor
+from .models import User, Patient, Doctor, Medication, Staff
 
 class CustomUserAdmin(UserAdmin):
     # Add user_type to the list display in the Django admin
@@ -22,3 +22,5 @@ class DoctorAdmin(admin.ModelAdmin):
 admin.site.register(User, CustomUserAdmin)
 admin.site.register(Patient, PatientAdmin)
 admin.site.register(Doctor, DoctorAdmin)
+admin.site.register(Medication)
+admin.site.register(Staff)
